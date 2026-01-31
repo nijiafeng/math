@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二上寒假计算练习 - 随机出题系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Microsoft YaHei', 'SimHei', sans-serif; }
+        body { background-color: #f5f5f5; padding: 15px; line-height: 1.5; color: #333; }
+        .container { max-width: 210mm; min-height: 290mm; margin: 0 auto; background-color: white; padding: 3mm 15mm 8mm 15mm; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }
+        .header { text-align: center; margin-bottom: 5px; padding-bottom: 3px; }
+        h1 { color: #2c3e50; font-size: 30px; margin-bottom: 3px; margin-top: 0; font-family: 'STKaiti', 'KaiTi', '楷体', '华文楷体', 'Microsoft YaHei', serif; font-weight: bold; letter-spacing: 2px; padding: 6px 0; border-bottom: none; border-top: none; }
+        .info { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; margin-top: -3px; }
+        .section { margin-bottom: 15px; page-break-inside: avoid; }
+        h2 { color: #4a6fa5; font-size: 18px; padding-bottom: 6px; border-bottom: 1px dashed #ddd; margin-bottom: 10px; }
+        .question-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+        .question { padding: 6px; font-size: 15px; }
+        .inequality-question { margin-bottom: 6px; font-size: 15px; }
+        .parentheses { position: relative; display: inline-block; margin: 0 3px; }
+        .parentheses::before { content: "("; position: absolute; left: -8px; font-size: 16px; }
+        .parentheses::after { content: ")"; position: absolute; right: -8px; font-size: 16px; }
+        .parentheses .blank { display: inline-block; width: 25px; height: 20px; margin: 0 5px; }
+        .division-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+        .division-item { display: flex; flex-direction: column; min-height: 150px; }
+        .division-question { font-size: 15px; margin-bottom: 6px; height: 22px; }
+        .division-space { flex-grow: 1; min-height: 125px; position: relative; border: none; }
+        .division-space::before { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 2px dashed #999; border-radius: 4px; box-sizing: border-box; pointer-events: none; }
+        .calculation-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+        .calculation-row.second-row { margin-top: 20px; }
+        .calculation-item { display: flex; flex-direction: column; min-height: 150px; }
+        .calculation-question { font-size: 15px; margin-bottom: 6px; height: 22px; }
+        .calculation-space { flex-grow: 1; min-height: 125px; position: relative; border: none; }
+        .calculation-space::before { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 2px dashed #999; border-radius: 4px; box-sizing: border-box; pointer-events: none; }
+        .verification-item { display: flex; flex-direction: row; min-height: 150px; gap: 8px; }
+        .verification-question { font-size: 15px; margin-bottom: 6px; height: 22px; width: 100%; }
+        .verification-container { display: flex; flex-direction: row; width: 100%; gap: 8px; }
+        .verification-calculation-space { flex: 1; min-height: 125px; position: relative; border: none; }
+        .verification-space { flex: 1; min-height: 125px; position: relative; border: none; }
+        .verification-calculation-space::before, .verification-space::before { content: ""; position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 2px dashed #999; border-radius: 4px; box-sizing: border-box; pointer-events: none; }
+        .star { color: #e74c3c; font-weight: bold; margin-right: 5px; }
+        .footer { text-align: center; margin-top: 15px; padding-top: 12px; border-top: 1px solid #ddd; color: #7f8c8d; font-size: 14px; }
+        .controls { text-align: center; margin-bottom: 15px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .control-btn { background-color: #4a6fa5; color: white; border: none; padding: 10px 20px; font-size: 15px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s; min-width: 140px; }
+        .control-btn:hover { background-color: #3a5a80; }
+        .control-btn.generate { background-color: #27ae60; }
+        .control-btn.generate:hover { background-color: #219653; }
+        .control-btn.print { background-color: #e67e22; }
+        .control-btn.print:hover { background-color: #d35400; }
+        @media print {
+            body { background-color: white; padding: 0; }
+            .container { box-shadow: none; padding: 5mm 12mm 5mm 12mm; max-width: 100%; min-height: auto; }
+            .controls { display: none; }
+            h1 { color: #2c3e50; -webkit-text-fill-color: #2c3e50; background: none; text-shadow: none; font-size: 28px; padding: 4px 0; margin-bottom: 2px; }
+            .info { margin-bottom: 8px; font-size: 13px; }
+            .section { margin-bottom: 12px; }
+            h2 { font-size: 17px; margin-bottom: 8px; padding-bottom: 4px; }
+            .question-group { gap: 8px; margin-bottom: 6px; }
+            .question, .inequality-question { font-size: 14px; padding: 4px; }
+            .division-row, .calculation-row { gap: 10px; margin-bottom: 10px; }
+            .division-item, .calculation-item { min-height: 145px; }
+            .division-space, .calculation-space, .verification-calculation-space, .verification-space { min-height: 120px; }
+            .verification-item { min-height: 145px; gap: 6px; }
+            .verification-container { gap: 6px; }
+            .division-space::before, .calculation-space::before, .verification-calculation-space::before, .verification-space::before { border-color: #666 !important; border-width: 1.5px; }
+            .footer { margin-top: 10px; padding-top: 8px; font-size: 13px; }
+        }
+        @media (max-width: 768px) {
+            .question-group { grid-template-columns: repeat(2, 1fr); }
+            .division-row, .calculation-row { grid-template-columns: repeat(2, 1fr); }
+            .container { padding: 5mm; }
+            .verification-item { flex-direction: column; }
+            .verification-container { flex-direction: column; }
+        }
+        .loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.8); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
+        .loading.show { display: flex; }
+        .spinner { border: 8px solid #f3f3f3; border-top: 8px solid #4a6fa5; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading"><div class="spinner"></div><p>正在生成PDF，请稍候...</p></div>
+    <div class="controls">
+        <button class="control-btn generate" id="generateQuestions">随机出题</button>
+        <button class="control-btn" id="downloadPdf">下载PDF</button>
+        <button class="control-btn print" onclick="window.print()">打印页面</button>
+    </div>
+    <div class="container" id="content">
+        <div class="header"><h1>二上寒假计算练习</h1></div>
+        <div class="info">
+            <div>班级：__________</div><div>姓名：__________</div><div>日期：__________</div><div>得分：__________</div>
+        </div>
+        <div class="section"><h2>一、直接写出得数（每题2分）</h2><div class="question-group" id="part1"></div></div>
+        <div class="section"><h2>二、括号里最大填几（每题2分）</h2><div class="question-group" id="part2"></div></div>
+        <div class="section"><h2>三、竖式计算1（每题4分，<strong>横线用尺！数位对齐！下同！</strong>）</h2>
+            <div class="division-row" id="part3-row1"></div><div class="division-row" id="part3-row2"></div>
+        </div>
+        <div class="section"><h2>四、竖式计算2（标记*的2题需要验算，每题6分，其余每题4分）</h2>
+            <div class="calculation-row" id="part4-row1"></div><div class="calculation-row second-row" id="part4-row2"></div>
+        </div>
+        <div class="footer"><p>完成时间：__________分钟  检查人：__________</p><p>© 二上寒假计算练习 - 共32题</p></div>
+    </div>
+    <script>
+        let currentAnswers = { part1: [], part2: [], part3: [], part4: [] };
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function generatePart1() {
+            const part1Container = document.getElementById('part1'); part1Container.innerHTML = ''; currentAnswers.part1 = [];
+            const questionTypes = ['multiplication', 'division', 'addition', 'subtraction']; let questions = [];
+            for (let type of questionTypes) { questions.push(type); }
+            while (questions.length < 8) { questions.push(questionTypes[getRandomInt(0, 3)]); }
+            questions = questions.sort(() => Math.random() - 0.5);
+            for (let type of questions) {
+                let question, answer;
+                switch(type) {
+                    case 'multiplication': const factor1 = getRandomInt(1, 9); const factor2 = getRandomInt(1, 9); question = `${factor1} × ${factor2} = ______`; answer = factor1 * factor2; break;
+                    case 'division': const divisor = getRandomInt(1, 9); const quotient = getRandomInt(1, 9); const dividend = divisor * quotient; question = `${dividend} ÷ ${divisor} = ______`; answer = quotient; break;
+                    case 'addition': const addend1 = getRandomInt(10, 99); const addend2 = getRandomInt(10, 99); question = `${addend1} + ${addend2} = ______`; answer = addend1 + addend2; break;
+                    case 'subtraction': const minuend = getRandomInt(30, 99); const subtrahend = getRandomInt(10, minuend - 10); question = `${minuend} - ${subtrahend} = ______`; answer = minuend - subtrahend; break;
+                }
+                const questionDiv = document.createElement('div'); questionDiv.className = 'question'; questionDiv.textContent = question; part1Container.appendChild(questionDiv);
+                currentAnswers.part1.push(answer);
+            }
+        }
+        function generatePart2() {
+            const part2Container = document.getElementById('part2'); part2Container.innerHTML = ''; currentAnswers.part2 = [];
+            for (let i = 0; i < 8; i++) {
+                const multiplier = getRandomInt(3, 9); let maxProduct;
+                if (i < 4) {
+                    maxProduct = getRandomInt(multiplier * 2 + 1, multiplier * 9 - 1);
+                    const questionDiv = document.createElement('div'); questionDiv.className = 'inequality-question';
+                    questionDiv.innerHTML = `<span class="parentheses"><span class="blank"></span></span> × ${multiplier} &lt; ${maxProduct}`;
+                    part2Container.appendChild(questionDiv);
+                } else {
+                    maxProduct = getRandomInt(multiplier * 2 + 1, multiplier * 9 - 1);
+                    const questionDiv = document.createElement('div'); questionDiv.className = 'inequality-question';
+                    questionDiv.innerHTML = `${multiplier} × <span class="parentheses"><span class="blank"></span></span> &lt; ${maxProduct}`;
+                    part2Container.appendChild(questionDiv);
+                }
+                const maxFill = Math.floor((maxProduct - 1) / multiplier); currentAnswers.part2.push(maxFill);
+            }
+        }
+        function generatePart3() {
+            const row1Container = document.getElementById('part3-row1'); const row2Container = document.getElementById('part3-row2');
+            row1Container.innerHTML = ''; row2Container.innerHTML = ''; currentAnswers.part3 = [];
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 4; col++) {
+                    const divisor = getRandomInt(3, 9); const quotient = getRandomInt(3, 9); const remainder = getRandomInt(1, divisor - 1); const dividend = divisor * quotient + remainder;
+                    const divisionItem = document.createElement('div'); divisionItem.className = 'division-item';
+                    divisionItem.innerHTML = `<div class="division-question">${dividend} ÷ ${divisor} = </div><div class="division-space"></div>`;
+                    if (row === 0) { row1Container.appendChild(divisionItem); } else { row2Container.appendChild(divisionItem); }
+                    currentAnswers.part3.push({ dividend, divisor, quotient, remainder });
+                }
+            }
+        }
+        function generatePart4() {
+            const row1Container = document.getElementById('part4-row1'); const row2Container = document.getElementById('part4-row2');
+            row1Container.innerHTML = ''; row2Container.innerHTML = ''; currentAnswers.part4 = [];
+            const questionTypes = ['addTwoTwo', 'addTwoThree', 'addThreeTwo', 'addThreeThree', 'subTwoTwo', 'subThreeTwo', 'subTwoThree', 'subThreeThree'];
+            for (let i = 0; i < 4; i++) {
+                const addTypes = questionTypes.filter(t => t.startsWith('add')); const subTypes = questionTypes.filter(t => t.startsWith('sub'));
+                const allTypes = [...addTypes, ...subTypes]; const type = allTypes[getRandomInt(0, allTypes.length - 1)];
+                const questionData = generateQuestionByType(type);
+                const calculationItem = document.createElement('div'); calculationItem.className = 'calculation-item';
+                calculationItem.innerHTML = `<div class="calculation-question">${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="calculation-space"></div>`;
+                row1Container.appendChild(calculationItem); currentAnswers.part4.push({ num1: questionData.num1, num2: questionData.num2, operator: questionData.operator, answer: questionData.answer, type });
+            }
+            for (let i = 0; i < 2; i++) {
+                const addTypes = questionTypes.filter(t => t.startsWith('add')); const subTypes = questionTypes.filter(t => t.startsWith('sub'));
+                const allTypes = [...addTypes, ...subTypes]; const type = allTypes[getRandomInt(0, allTypes.length - 1)];
+                const questionData = generateQuestionByType(type);
+                const calculationItem = document.createElement('div'); calculationItem.className = 'calculation-item';
+                calculationItem.innerHTML = `<div class="calculation-question">${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="calculation-space"></div>`;
+                row2Container.appendChild(calculationItem); currentAnswers.part4.push({ num1: questionData.num1, num2: questionData.num2, operator: questionData.operator, answer: questionData.answer, type });
+            }
+            for (let i = 0; i < 2; i++) {
+                const addTypes = questionTypes.filter(t => t.startsWith('add')); const subTypes = questionTypes.filter(t => t.startsWith('sub'));
+                const allTypes = [...addTypes, ...subTypes]; const type = allTypes[getRandomInt(0, allTypes.length - 1)];
+                const questionData = generateQuestionByType(type);
+                const verificationItem = document.createElement('div'); verificationItem.className = 'verification-item';
+                verificationItem.innerHTML = `<div style="display: flex; flex-direction: column; width: 100%;"><div class="verification-question"><span class="star">*</span>${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="verification-container"><div class="verification-calculation-space"></div><div class="verification-space"></div></div></div>`;
+                row2Container.appendChild(verificationItem); currentAnswers.part4.push({ num1: questionData.num1, num2: questionData.num2, operator: questionData.operator, answer: questionData.answer, type, needsVerification: true });
+            }
+        }
+        function generateQuestionByType(type) {
+            let num1, num2, operator, answer;
+            switch(type) {
+                case 'addTwoTwo': num1 = getRandomInt(10, 99); num2 = getRandomInt(10, 99); operator = '+'; answer = num1 + num2; break;
+                case 'addTwoThree': num1 = getRandomInt(10, 99); num2 = getRandomInt(100, 999); operator = '+'; answer = num1 + num2; break;
+                case 'addThreeTwo': num1 = getRandomInt(100, 999); num2 = getRandomInt(10, 99); operator = '+'; answer = num1 + num2; break;
+                case 'addThreeThree': num1 = getRandomInt(100, 500); num2 = getRandomInt(100, 500); operator = '+'; answer = num1 + num2; break;
+                case 'subTwoTwo': num1 = getRandomInt(30, 99); num2 = getRandomInt(10, num1 - 10); operator = '-'; answer = num1 - num2; break;
+                case 'subThreeTwo': num1 = getRandomInt(100, 999); num2 = getRandomInt(10, 99); operator = '-'; answer = num1 - num2; break;
+                case 'subTwoThree': num2 = getRandomInt(100, 200); num1 = getRandomInt(num2 + 10, 300); operator = '-'; answer = num1 - num2; break;
+                case 'subThreeThree': num1 = getRandomInt(200, 999); num2 = getRandomInt(100, num1 - 100); operator = '-'; answer = num1 - num2; break;
+            }
+            return { num1, num2, operator, answer, type };
+        }
+        function generateAllQuestions() { generatePart1(); generatePart2(); generatePart3(); generatePart4(); console.log("题目已生成，答案：", currentAnswers); }
+        async function downloadPDF() {
+            const loadingElement = document.getElementById('loading'); loadingElement.classList.add('show');
+            try {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const canvas = await html2canvas(document.getElementById('content'), { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+                const { jsPDF } = window.jspdf; const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pageWidth = pdf.internal.pageSize.getWidth(); const pageHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = pageWidth - 20; const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                const imgData = canvas.toDataURL('image/jpeg', 1.0); pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight);
+                pdf.save('二上寒假计算练习.pdf'); loadingElement.classList.remove('show');
+            } catch (error) { console.error('生成PDF时出错:', error); loadingElement.classList.remove('show'); alert('生成PDF失败，请重试或使用打印功能。'); }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            generateAllQuestions();
+            document.getElementById('generateQuestions').addEventListener('click', generateAllQuestions);
+            document.getElementById('downloadPdf').addEventListener('click', downloadPDF);
+        });
+        window.addEventListener('beforeprint', function() { document.querySelector('.controls').style.display = 'none'; });
+        window.addEventListener('afterprint', function() { document.querySelector('.controls').style.display = 'flex'; });
+    </script>
+</body>
+</html>
