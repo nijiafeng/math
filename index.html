@@ -115,7 +115,16 @@
                 switch(type) {
                     case 'multiplication': const factor1 = getRandomInt(1, 9); const factor2 = getRandomInt(1, 9); question = `${factor1} × ${factor2} = ______`; answer = factor1 * factor2; break;
                     case 'division': const divisor = getRandomInt(1, 9); const quotient = getRandomInt(1, 9); const dividend = divisor * quotient; question = `${dividend} ÷ ${divisor} = ______`; answer = quotient; break;
-                    case 'addition': const addend1 = getRandomInt(10, 99); const addend2 = getRandomInt(10, 99); question = `${addend1} + ${addend2} = ______`; answer = addend1 + addend2; break;
+                    case 'addition': 
+                        // 两位数加两位数，结果不超过100
+                        let addend1, addend2;
+                        do {
+                            addend1 = getRandomInt(10, 99);
+                            addend2 = getRandomInt(10, 99);
+                        } while (addend1 + addend2 > 100);
+                        question = `${addend1} + ${addend2} = ______`; 
+                        answer = addend1 + addend2; 
+                        break;
                     case 'subtraction': const minuend = getRandomInt(30, 99); const subtrahend = getRandomInt(10, minuend - 10); question = `${minuend} - ${subtrahend} = ______`; answer = minuend - subtrahend; break;
                 }
                 const questionDiv = document.createElement('div'); questionDiv.className = 'question'; questionDiv.textContent = question; part1Container.appendChild(questionDiv);
@@ -156,47 +165,244 @@
         function generatePart4() {
             const row1Container = document.getElementById('part4-row1'); const row2Container = document.getElementById('part4-row2');
             row1Container.innerHTML = ''; row2Container.innerHTML = ''; currentAnswers.part4 = [];
-            const questionTypes = ['addTwoTwo', 'addTwoThree', 'addThreeTwo', 'addThreeThree', 'subTwoTwo', 'subThreeTwo', 'subTwoThree', 'subThreeThree'];
-            for (let i = 0; i < 4; i++) {
-                const addTypes = questionTypes.filter(t => t.startsWith('add')); const subTypes = questionTypes.filter(t => t.startsWith('sub'));
-                const allTypes = [...addTypes, ...subTypes]; const type = allTypes[getRandomInt(0, allTypes.length - 1)];
-                const questionData = generateQuestionByType(type);
-                const calculationItem = document.createElement('div'); calculationItem.className = 'calculation-item';
-                calculationItem.innerHTML = `<div class="calculation-question">${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="calculation-space"></div>`;
-                row1Container.appendChild(calculationItem); currentAnswers.part4.push({ num1: questionData.num1, num2: questionData.num2, operator: questionData.operator, answer: questionData.answer, type });
+            
+            // 决定两位数加减两位数的是加法还是减法（50%概率）
+            let twoDigitType;
+            if (Math.random() > 0.5) {
+                twoDigitType = 'addTwoTwo'; // 两位数加两位数
+            } else {
+                twoDigitType = 'subTwoTwo'; // 两位数减两位数
             }
-            for (let i = 0; i < 2; i++) {
-                const addTypes = questionTypes.filter(t => t.startsWith('add')); const subTypes = questionTypes.filter(t => t.startsWith('sub'));
-                const allTypes = [...addTypes, ...subTypes]; const type = allTypes[getRandomInt(0, allTypes.length - 1)];
-                const questionData = generateQuestionByType(type);
-                const calculationItem = document.createElement('div'); calculationItem.className = 'calculation-item';
-                calculationItem.innerHTML = `<div class="calculation-question">${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="calculation-space"></div>`;
-                row2Container.appendChild(calculationItem); currentAnswers.part4.push({ num1: questionData.num1, num2: questionData.num2, operator: questionData.operator, answer: questionData.answer, type });
+            
+            // 按照新的要求设置题型（只包含一道两位数加减两位数）
+            const questionTypes = [
+                twoDigitType,              // 1. 两位数加减两位数（只一道，随机加法或减法）
+                'subThreeTwoBorrow',       // 2. 100多减去两位数等于两位数（退位）
+                'subThreeTwo',             // 3. 普通的三位数减两位数
+                'addThreeThreeFour',       // 4. 三位数加三位数（结果是四位数）
+                'addThreeThreeThree',      // 5. 三位数加三位数（结果是三位数）
+                'addThreeTwo',             // 6. 三位数加两位数
+                'subThreeThree',           // 7. 三位数减三位数
+                'addTwoThree'              // 8. 两位数加三位数
+            ];
+            
+            // 随机打乱题型顺序（但要确保每种类型只出现一次）
+            const shuffledTypes = [...questionTypes].sort(() => Math.random() - 0.5);
+            
+            // 随机选择两题作为需要验算的题目
+            const verificationIndices = [];
+            while (verificationIndices.length < 2) {
+                const randomIndex = getRandomInt(0, 7);
+                if (!verificationIndices.includes(randomIndex)) {
+                    verificationIndices.push(randomIndex);
+                }
             }
-            for (let i = 0; i < 2; i++) {
-                const addTypes = questionTypes.filter(t => t.startsWith('add')); const subTypes = questionTypes.filter(t => t.startsWith('sub'));
-                const allTypes = [...addTypes, ...subTypes]; const type = allTypes[getRandomInt(0, allTypes.length - 1)];
+            
+            // 生成8道题
+            for (let i = 0; i < 8; i++) {
+                const type = shuffledTypes[i];
                 const questionData = generateQuestionByType(type);
-                const verificationItem = document.createElement('div'); verificationItem.className = 'verification-item';
-                verificationItem.innerHTML = `<div style="display: flex; flex-direction: column; width: 100%;"><div class="verification-question"><span class="star">*</span>${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="verification-container"><div class="verification-calculation-space"></div><div class="verification-space"></div></div></div>`;
-                row2Container.appendChild(verificationItem); currentAnswers.part4.push({ num1: questionData.num1, num2: questionData.num2, operator: questionData.operator, answer: questionData.answer, type, needsVerification: true });
+                const needsVerification = verificationIndices.includes(i);
+                
+                // 判断题目应该放在第一行还是第二行
+                const isFirstRow = i < 4;
+                
+                if (needsVerification) {
+                    // 无论题目在哪一行，验算题都需要两个竖向虚线框
+                    let verificationItem;
+                    if (isFirstRow) {
+                        // 第一行：使用calculation-item容器，但内部有两个竖向虚线框
+                        verificationItem = document.createElement('div'); 
+                        verificationItem.className = 'calculation-item';
+                        verificationItem.innerHTML = `
+                            <div class="calculation-question"><span class="star">*</span>${questionData.num1} ${questionData.operator} ${questionData.num2} = </div>
+                            <div class="verification-container" style="display: flex; gap: 8px; width: 100%; height: 125px;">
+                                <div class="verification-calculation-space" style="flex: 1;"></div>
+                                <div class="verification-space" style="flex: 1;"></div>
+                            </div>
+                        `;
+                        row1Container.appendChild(verificationItem);
+                    } else {
+                        // 第二行：使用标准的verification-item结构
+                        verificationItem = document.createElement('div'); 
+                        verificationItem.className = 'verification-item';
+                        verificationItem.innerHTML = `
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div class="verification-question"><span class="star">*</span>${questionData.num1} ${questionData.operator} ${questionData.num2} = </div>
+                                <div class="verification-container">
+                                    <div class="verification-calculation-space"></div>
+                                    <div class="verification-space"></div>
+                                </div>
+                            </div>
+                        `;
+                        row2Container.appendChild(verificationItem);
+                    }
+                } else {
+                    // 非验算题
+                    const calculationItem = document.createElement('div'); 
+                    calculationItem.className = isFirstRow ? 'calculation-item' : 'calculation-item';
+                    
+                    if (isFirstRow) {
+                        calculationItem.innerHTML = `<div class="calculation-question">${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="calculation-space"></div>`;
+                        row1Container.appendChild(calculationItem);
+                    } else {
+                        calculationItem.innerHTML = `<div class="calculation-question">${questionData.num1} ${questionData.operator} ${questionData.num2} = </div><div class="calculation-space"></div>`;
+                        row2Container.appendChild(calculationItem);
+                    }
+                }
+                
+                currentAnswers.part4.push({ 
+                    num1: questionData.num1, 
+                    num2: questionData.num2, 
+                    operator: questionData.operator, 
+                    answer: questionData.answer, 
+                    type,
+                    needsVerification: needsVerification 
+                });
             }
         }
         function generateQuestionByType(type) {
             let num1, num2, operator, answer;
             switch(type) {
-                case 'addTwoTwo': num1 = getRandomInt(10, 99); num2 = getRandomInt(10, 99); operator = '+'; answer = num1 + num2; break;
-                case 'addTwoThree': num1 = getRandomInt(10, 99); num2 = getRandomInt(100, 999); operator = '+'; answer = num1 + num2; break;
-                case 'addThreeTwo': num1 = getRandomInt(100, 999); num2 = getRandomInt(10, 99); operator = '+'; answer = num1 + num2; break;
-                case 'addThreeThree': num1 = getRandomInt(100, 500); num2 = getRandomInt(100, 500); operator = '+'; answer = num1 + num2; break;
-                case 'subTwoTwo': num1 = getRandomInt(30, 99); num2 = getRandomInt(10, num1 - 10); operator = '-'; answer = num1 - num2; break;
-                case 'subThreeTwo': num1 = getRandomInt(100, 999); num2 = getRandomInt(10, 99); operator = '-'; answer = num1 - num2; break;
-                case 'subTwoThree': num2 = getRandomInt(100, 200); num1 = getRandomInt(num2 + 10, 300); operator = '-'; answer = num1 - num2; break;
-                case 'subThreeThree': num1 = getRandomInt(200, 999); num2 = getRandomInt(100, num1 - 100); operator = '-'; answer = num1 - num2; break;
+                case 'addTwoTwo': 
+                    // 两位数加两位数，有80%概率结果是三位数（≥100），20%概率结果是两位数（<100）
+                    const isThreeDigitResult = Math.random() < 0.8; // 80%概率结果为三位数
+                    
+                    if (isThreeDigitResult) {
+                        // 结果为三位数（≥100）
+                        // 确保两个数相加≥100
+                        do {
+                            num1 = getRandomInt(10, 99);
+                            num2 = getRandomInt(10, 99);
+                        } while (num1 + num2 < 100);
+                    } else {
+                        // 结果为两位数（<100）
+                        do {
+                            num1 = getRandomInt(10, 99);
+                            num2 = getRandomInt(10, 99);
+                        } while (num1 + num2 >= 100);
+                    }
+                    operator = '+'; 
+                    answer = num1 + num2; 
+                    break;
+                case 'subTwoTwo': 
+                    // 两位数减两位数
+                    num1 = getRandomInt(30, 99); 
+                    num2 = getRandomInt(10, num1 - 10); 
+                    operator = '-'; 
+                    answer = num1 - num2; 
+                    break;
+                case 'addTwoThree': 
+                    // 两位数加三位数，结果可以超过1000
+                    num1 = getRandomInt(10, 99); 
+                    num2 = getRandomInt(100, 999); 
+                    operator = '+'; 
+                    answer = num1 + num2; 
+                    break;
+                case 'addThreeTwo': 
+                    // 三位数加两位数，结果可以超过1000
+                    num1 = getRandomInt(100, 999); 
+                    num2 = getRandomInt(10, 99); 
+                    operator = '+'; 
+                    answer = num1 + num2; 
+                    break;
+                case 'addThreeThreeFour': 
+                    // 三位数加三位数，结果是四位数（和>=1000）
+                    do {
+                        num1 = getRandomInt(500, 999);
+                        num2 = getRandomInt(500, 999);
+                    } while (num1 + num2 < 1000);
+                    operator = '+'; 
+                    answer = num1 + num2; 
+                    break;
+                case 'addThreeThreeThree': 
+                    // 三位数加三位数，结果是三位数（和<1000）
+                    do {
+                        num1 = getRandomInt(100, 900);
+                        num2 = getRandomInt(100, 900);
+                    } while (num1 + num2 >= 1000);
+                    operator = '+'; 
+                    answer = num1 + num2; 
+                    break;
+                case 'subThreeTwo': 
+                    // 普通的三位数减两位数
+                    num1 = getRandomInt(100, 999); 
+                    num2 = getRandomInt(10, 99); 
+                    // 确保被减数大于减数
+                    if (num1 < num2) {
+                        [num1, num2] = [num2, num1];
+                    }
+                    operator = '-'; 
+                    answer = num1 - num2; 
+                    break;
+                case 'subThreeTwoBorrow': 
+                    // 100多减去两位数，结果可以是两位数或一位数
+                    do {
+                        // 被减数在100-199之间
+                        num1 = getRandomInt(100, 199);
+                        // 减数是两位数10-99
+                        num2 = getRandomInt(10, 99);
+                        // 确保需要退位（个位不够减）
+                        const num1Ones = num1 % 10;
+                        const num2Ones = num2 % 10;
+                        if (num1Ones >= num2Ones) {
+                            // 如果个位够减，调整减数的个位使其大于被减数的个位
+                            num2 = Math.floor(num2 / 10) * 10 + getRandomInt(num1Ones + 1, 9);
+                        }
+                        // 确保被减数大于减数
+                    } while (num1 <= num2);
+                    
+                    operator = '-'; 
+                    answer = num1 - num2; 
+                    break;
+                case 'subThreeThree': 
+                    // 三位数减三位数，结果有20%概率是一位数，20%概率是两位数，60%概率是三位数
+                    const randomValue = Math.random();
+                    
+                    if (randomValue < 0.2) {
+                        // 20%概率：结果是1位数（1-9）
+                        answer = getRandomInt(1, 9);
+                        // 生成被减数（100-999）和减数（100-999）
+                        num1 = getRandomInt(answer + 100, 999); // 被减数至少比答案大100，确保减数是三位数
+                        num2 = num1 - answer;
+                    } else if (randomValue < 0.4) {
+                        // 20%概率：结果是2位数（10-99）
+                        answer = getRandomInt(10, 99);
+                        // 生成被减数（100-999）和减数（100-999）
+                        num1 = getRandomInt(answer + 100, 999); // 被减数至少比答案大100
+                        num2 = num1 - answer;
+                    } else {
+                        // 60%概率：结果是3位数（100-899）
+                        answer = getRandomInt(100, 899);
+                        // 生成被减数（200-999）和减数（100-899）
+                        num1 = getRandomInt(answer + 100, 999); // 被减数至少比答案大100
+                        num2 = num1 - answer;
+                    }
+                    
+                    // 确保被减数和减数都是三位数且被减数大于减数
+                    if (num2 < 100 || num1 <= num2) {
+                        // 如果不符合要求，重新生成
+                        return generateQuestionByType(type);
+                    }
+                    
+                    // 确保被减数和减数都不超过999
+                    if (num1 > 999 || num2 > 999) {
+                        // 如果不符合要求，重新生成
+                        return generateQuestionByType(type);
+                    }
+                    
+                    operator = '-'; 
+                    break;
             }
             return { num1, num2, operator, answer, type };
         }
-        function generateAllQuestions() { generatePart1(); generatePart2(); generatePart3(); generatePart4(); console.log("题目已生成，答案：", currentAnswers); }
+        function generateAllQuestions() { 
+            generatePart1(); 
+            generatePart2(); 
+            generatePart3(); 
+            generatePart4(); 
+            console.log("题目已生成，答案：", currentAnswers); 
+        }
         async function downloadPDF() {
             const loadingElement = document.getElementById('loading'); loadingElement.classList.add('show');
             try {
@@ -219,3 +425,4 @@
     </script>
 </body>
 </html>
+Update math practice system
